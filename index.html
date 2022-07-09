@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			body {
+				display: flex;
+			}
+			div {
+				flex: 0.7;
+				text-align: center;
+			}
+			div:first-child {
+				margin-right: 20px;
+			}
+			table {
+				width: 100%;
+				border: 2px solid #000;
+			}
+			td {
+				border: 1px solid #000;
+			}
+			form > p {
+				margin: 10px 0;
+			}
+			form,
+			.form-box > p {
+				padding: 20px 0;
+				text-align: center;
+				border: 2px solid #000;
+			}
+			.form-box {
+				flex: 0.3;
+				display: flex;
+				flex-direction: column;
+			}
+			.form-box p {
+				width: 100%;
+			}
+
+			#query {
+				display: block;
+			}
+			.form-box > p {
+				margin-top: 20px;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+			.form-box > p > input {
+				width: 50%;
+				margin: 10px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div>
+			<table></table>
+		</div>
+		<div class="form-box">
+			<form action="">
+				<p>
+					<span>书名</span>
+					<input type="text" name="bookname" />
+				</p>
+				<p>
+					<span>作者</span>
+					<input type="text" name="author" />
+				</p>
+				<p>
+					<span>出版社</span>
+					<input type="text" name="publisher" />
+				</p>
+
+				<button type="submit" id="submit">提交</button>
+			</form>
+			<p>
+				<span>搜索图书</span>
+				<input
+					type="number"
+					min="1"
+					placeholder="请输入图书ID,不填写则获取全部图书"
+				/>
+				<button id="query">查询</button>
+			</p>
+		</div>
+		<!-- <script src="./form-serialize.js"></script> -->
+
+		<script>
+			render()
+
+			async function get(id) {
+				let result = await http({
+					method: 'get',
+					url: 'http://ajax-base-api-t.itheima.net/api/getbooks',
+					params: {
+						id,
+					},
+				})
+				return result
+				// render()
+				console.log('get()', result)
+			}
+
+			async function remove(id) {
+				let resultRemove = await http({
+					method: 'delete',
+					url: 'http://ajax-base-api-t.itheima.net/api/delbook',
+					params: {
+						id,
+					},
+				})
+				if (resultRemove.status === 200) {
+					render()
+				}
+				return await resultRemove
+				console.log('resultRemove', resultRemove)
+			}
+			async function add(data, method = 'post') {
+				let result = await http({
+					method,
+					url: 'http://ajax-base-api-t.itheima.net/api/addbook',
+					data,
+				})
+				render()
+				return await result
+				console.log('post', result)
+			}
+			async function http(obj) {
+				let { method, url, params = null, data = null } = obj
+				if (params) {
+					let str = new URLSearchParams(params).toString()
+					console.log(str)
+					if (!url.includes('?')) url += '?' + str
+					else url += str
+				}
+				let res
+				if (data) {
+					res = await fetch(url, {
+						method,
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(data),
+					})
+				} else {
+					res = await fetch(url)
+				}
+				return res.json()
+			}
+
+			async function render(id) {
+				let RES
+				if (id) {
+					await get(id).then(res => {
+						console.log(res, 'resren')
+						RES = res
+					})
+					console.log(RES, 'res')
+				} else {
+					RES = await http({
+						method: 'get',
+						url: 'http://ajax-base-api-t.itheima.net/api/getbooks',
+					})
+				}
+				console.log(JSON.stringify(RES.data))
+				let htmlStr = ''
+				RES.data.forEach(item => {
+					htmlStr += `
+			          <tr>
+			        <td>${item.id}</td>
+			        <td>${item.bookname}</td>
+			       	<td>${item.author}</td>
+			        <td>${item.publisher}</td>
+			       	<td><button data-id="${item.id}" type="button" id="btn">删除</button></td>
+			      	</tr>`
+				})
+				let table = document.querySelector('table')
+				table.innerHTML = htmlStr
+				let btn = [...document.querySelectorAll('#btn')]
+				btn.forEach(item => {
+					item.addEventListener('click', e => {
+						let id = e.target.dataset.id
+						remove(id).then(res => {
+							console.log(res)
+							let { msg } = res
+							alert(msg)
+						})
+					})
+				})
+				// console.log(htmlStr)
+			}
+
+			// let serialNumber = 0
+			const formElement = document.querySelector('form')
+			formElement.onsubmit = getFormData
+			function getFormData(e) {
+				// let arr = []
+				let formData = new FormData(formElement)
+				// var bookname = formData.get('bookname')
+				// var author = formData.get('author')
+				// var publisher = formData.get('publisher')
+				e.preventDefault()
+				// formData.append('serialNumber', ++serialNumber) //添加数据
+				// for ([name, value] of formData.entries()) {
+				// 	// 遍历数据
+
+				// 	console.log(`${name}${value}`)
+				// 	// let bookname = formData.get(bookname)
+				// 	if (value) arr.push(value)
+				// }
+
+				// console.log(bookname)
+				/* 手动发送数据 xhr */
+				// var request = new XMLHttpRequest()
+				// request.open("POST", "submitform.php")
+				// request.send(formData)
+
+				add({
+					bookname: formData.get('bookname'),
+					author: formData.get('author'),
+					publisher: formData.get('publisher'),
+				})
+					.then(res => {
+						let { status, msg } = res
+						if (status === 201) {
+							formElement.reset()
+						}
+						alert(msg)
+						console.log(res, 'res')
+					})
+					.catch(err => {
+						console.log(err, 'err')
+					})
+			}
+
+			function juan() {
+				setInterval(() => {
+					let yy = new Date().getFullYear()
+					let mm =
+						new Date().getMonth() + 1 < 10
+							? '0' + (new Date().getMonth() + 1)
+							: new Date().getMonth() + 1
+					let dd =
+						new Date().getDate() < 10
+							? '0' + new Date().getDate()
+							: new Date().getDate()
+					let hh =
+						new Date().getHours() < 10
+							? '0' + new Date().getHours()
+							: new Date().getHours()
+					let mf =
+						new Date().getMinutes() < 10
+							? '0' + new Date().getMinutes()
+							: new Date().getMinutes()
+					let hm =
+						new Date().getSeconds() < 10
+							? '0' + new Date().getSeconds()
+							: new Date().getSeconds()
+
+					let dateTime =
+						yy + '.' + mm + '.' + dd + ' ' + hh + ':' + mf + ':' + hm
+					add({
+						bookname: dateTime,
+						author: '求大家别卷了',
+						publisher: '求大家别卷了',
+					})
+				}, 400)
+			}
+			function removeAll() {
+				for (let index = 200; index < 300; index++) {
+					setInterval(() => {
+						remove(index)
+					}, 1000)
+				}
+			}
+			// removeAll()
+
+			let queryBtn = document.getElementById('query')
+			let queryinpId = queryBtn.parentNode.querySelector('input')
+			queryBtn.addEventListener('click', () => {
+				if (queryinpId.value.trim()) {
+					render(queryinpId.value)
+					queryinpId.value = ''
+				} else {
+					render()
+				}
+			})
+
+			const JOSNARR = [
+				{
+					'id': 1,
+					'bookname': '西游记',
+					'author': '吴承恩',
+					'publisher': '北京图书出版社',
+				},
+				{
+					'id': 2,
+					'bookname': '红楼梦',
+					'author': '曹雪芹',
+					'publisher': '上海图书出版社',
+				},
+				{
+					'id': 3,
+					'bookname': '三国演义',
+					'author': '罗贯中',
+					'publisher': '北京图书出版社',
+				},
+				{ 'id': 301, 'bookname': '122', 'author': '323', 'publisher': '2323' },
+				{ 'id': 296, 'bookname': '1', 'author': '1', 'publisher': '1' },
+				{
+					'id': 295,
+					'bookname': '阿三大苏打',
+					'author': '阿三大苏打1',
+					'publisher': '阿三大苏打3',
+				},
+				{
+					'id': 291,
+					'bookname': '完成练习',
+					'author': '入职前端',
+					'publisher': '月薪上万！',
+				},
+				{
+					'id': 292,
+					'bookname': 'asdf',
+					'author': 'asdf',
+					'publisher': 'asdf',
+				},
+				{
+					'id': 293,
+					'bookname': '赋能',
+					'author': 'Yuuuu7',
+					'publisher': '黑马西安中心',
+				},
+				{
+					'id': 294,
+					'bookname': '盗墓笔记',
+					'author': '南派三叔',
+					'publisher': '浙江出版社',
+				},
+				{ 'id': 298, 'bookname': '22', 'author': '22', 'publisher': '22' },
+				{
+					'id': 299,
+					'bookname': '1234',
+					'author': '44444',
+					'publisher': '5555',
+				},
+				{ 'id': 300, 'bookname': '111', 'author': '111', 'publisher': '1111' },
+				{ 'id': 302, 'bookname': '123', 'author': '123', 'publisher': '123' },
+				{
+					'id': 303,
+					'bookname': '大家都来了啊',
+					'author': '哈哈',
+					'publisher': '人挺多的',
+				},
+			]
+		</script>
+	</body>
+</html>
